@@ -1,4 +1,5 @@
 import uuid
+import time
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -310,8 +311,14 @@ async def approve_allocation(
     allocation.recipient.status = "MATCHED"
     if allocation.match:
         allocation.match.status = "ACCEPTED"
+    # Start measuring PostgreSQL commit time
+    pg_start = time.perf_counter()
 
     await db.commit()
+    pg_latency_ms = (time.perf_counter() - pg_start) * 1000
+
+    print(f"[PERFORMANCE] PostgreSQL commit: {pg_latency_ms:.3f} ms")
+
     await db.refresh(allocation)
 
     # Trigger Hyperledger Fabric transaction anchoring
